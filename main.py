@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Main asteroid-automator script."""
 
-import os
+import platform
 
-import pyautogui
+PLATFORM_SYS = platform.system()
 
-if os.name == "windows":
+if PLATFORM_SYS == "Windows":
     import d3dshot
+elif PLATFORM_SYS == "Linux":
+    import pyautogui
 
 
 class AutomatableGame:
