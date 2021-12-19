@@ -25,10 +25,22 @@ class AbstractGameIO(ABC):
         """Creates a screenshot, and returns it in Pillow format."""
         pass
 
+    # TODO: Implement the following two functions in descendants.
+
     @abstractmethod
+    def key_up(self, key: str):
+        """Holds a key on a virtual keyboard."""
+        pass
+
+    @abstractmethod
+    def key_up(self, key: str):
+        """Lets go of a key on a virtual keyboard."""
+        pass
+
     def send_key(self, key: str):
         """Presses a key on a virtual keyboard."""
-        pass
+        self.key_up(key)
+        self.key_down(key)
 
 
 class WindowsGameIO(AbstractGameIO):
@@ -39,8 +51,11 @@ class WindowsGameIO(AbstractGameIO):
     def fetch_sshot(self):
         return self.d.screenshot()  # TODO: Cut this to self.loc(x, y, w, h)
 
-    def send_key(self, key: str):
-        pass  # TODO: Add send_key method
+    def key_up(self, key: str):
+        pass
+
+    def key_up(self, key: str):
+        pass
 
 
 class LinuxGameIO(AbstractGameIO):
@@ -52,5 +67,8 @@ class LinuxGameIO(AbstractGameIO):
     def fetch_sshot(self):
         return pyautogui.screenshot(region=self.loc)
 
-    def send_key(self, key: str):
-        pass  # TODO: Add send_key method
+    def key_up(self, key: str):
+        pass
+
+    def key_up(self, key: str):
+        pass
