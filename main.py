@@ -12,7 +12,7 @@ if PLATFORM_SYS == "Windows":
     import d3dshot
 
 
-class AbstractAutomatableGame(ABC):
+class AbstractGameIO(ABC):
     """Base class for each platform."""
 
     @abstractmethod
@@ -31,7 +31,7 @@ class AbstractAutomatableGame(ABC):
         pass
 
 
-class AutomatableGame__Windows(AbstractAutomatableGame):
+class WindowsGameIO(AbstractGameIO):
     def __init__(self):
         super().__init__(self)
         self.d = d3dshot.create()
@@ -43,7 +43,7 @@ class AutomatableGame__Windows(AbstractAutomatableGame):
         pass  # TODO: Add send_key method
 
 
-class AutomatableGame__Linux(AbstractAutomatableGame):
+class LinuxGameIO(AbstractAutomatableGame):
     """Base class for each platform."""
 
     def __init__(self):
