@@ -23,7 +23,7 @@ class AbstractGameIO(ABC):
     @abstractmethod
     def fetch_sshot(self):
         """Creates a screenshot, and returns it in Pillow format."""
-        return pyautogui.screenshot(region=self.loc)
+        pass
 
     @abstractmethod
     def send_key(self, key: str):
