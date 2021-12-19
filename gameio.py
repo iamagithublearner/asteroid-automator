@@ -33,7 +33,7 @@ class AbstractGameIO(ABC):
         pass
 
     @abstractmethod
-    def key_up(self, key: str):
+    def key_down(self, key: str):
         """Lets go of a key on a virtual keyboard."""
         pass
 
@@ -54,7 +54,7 @@ class WindowsGameIO(AbstractGameIO):
     def key_up(self, key: str):
         pass
 
-    def key_up(self, key: str):
+    def key_down(self, key: str):
         pass
 
 
@@ -70,5 +70,5 @@ class LinuxGameIO(AbstractGameIO):
     def key_up(self, key: str):
         pass
 
-    def key_up(self, key: str):
+    def key_down(self, key: str):
         pass
