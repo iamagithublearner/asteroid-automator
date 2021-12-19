@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+"""Main asteroid-automator script."""
+
 import os
 
 import pyautogui
@@ -7,10 +10,13 @@ if os.name == "windows":
 
 
 class AutomatableGame:
+    """Base class for each platform."""
+
     def __init__(self):
         self.loc = pyautogui.locateOnScreen("images/app.png")
 
     def fetch_sshot(self):
+        """Creates a screenshot, and returns it in Pillow format."""
         return pyautogui.screenshot(region=self.loc)
 
     def send_key(self, key):
@@ -23,4 +29,4 @@ class AutomatableGame__Windows(AutomatableGame):
         self.d = d3dshot.create()
 
     def fetch_sshot(self):
-        return d.screenshot()  # Cut this to self.loc(x, y, w, h)
+        return self.d.screenshot()  # TODO: Cut this to self.loc(x, y, w, h)
