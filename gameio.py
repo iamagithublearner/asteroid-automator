@@ -45,7 +45,7 @@ class AbstractGameIO(ABC):
 
 class WindowsGameIO(AbstractGameIO):
     def __init__(self):
-        super().__init__(self)
+        super().__init__()
         self.d = d3dshot.create()
 
     def fetch_sshot(self):
