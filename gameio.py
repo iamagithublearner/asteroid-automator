@@ -60,7 +60,7 @@ class WindowsGameIO(AbstractGameIO):
 
 class LinuxGameIO(AbstractGameIO):
     def __init__(self):
-        super().__init__(self)
+        super().__init__()
 
     def fetch_sshot(self):
         return pyautogui.screenshot(region=self.loc)
