@@ -45,12 +45,16 @@ class GameModel:
 
 if __name__ == '__main__':
     import platform
+
     if platform.system() == "Windows":
         io = gameio.WindowsGameIO()
-    #TODO, detect OSX or show a message of sadness
+    # TODO: Detect OSX or show a message of sadness
+
     else:
         io = gameio.LinuxGameIO()
+
     input("Press <enter> to locate the game at the start screen.")
     gm = GameModel(io)
+
     input("Press <enter> to detect asteroids on screen.")
     gm.find_asteroids()
