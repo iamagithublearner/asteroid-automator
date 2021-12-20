@@ -59,8 +59,6 @@ class WindowsGameIO(AbstractGameIO):
 
 
 class LinuxGameIO(AbstractGameIO):
-    """Base class for each platform."""
-
     def __init__(self):
         super().__init__()
 
