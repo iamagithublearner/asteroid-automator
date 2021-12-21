@@ -15,6 +15,10 @@ class GameModel:
             ("normal", cv2.imread("images/game_assets/rock-normal.png", 0)),
             ("small", cv2.imread("images/game_assets/rock-small.png", 0))
             ]
+        self.ships = [
+            ("ship_off", cv2.imread("images/game_assets/spaceship-off.png", 0)),
+            ("ship_on", cv2.imread("images/game_assets/spaceship-on.png", 0))
+            ]
         self.frame = None
         self.cv_template_thresh = 0.6 # reconfigurable at runtime
         self.duplicate_dist_thresh = 10
@@ -59,6 +63,21 @@ class GameModel:
         cv2.imshow("Results", displayable)
         cv2.waitKey(0)
 
+    @with_frame
+    def find_ships(self):
+        sift = cv2.SIFT_create()
+        frame_kp, frame_desc = sift.detectAndCompute(self.frame, None)
+        kp_desc = [] # list of (keypoints, descriptions) for all ship sprites
+        for label, s in self.ships:
+            kp_desc.append((label, sift.detectAndCompute(s, None)))
+        bf = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True)
+        matchsets = []
+        for label, kpdesc in kp_desc:
+            _, desc = kpdesc
+            matchsets.append((label, bf.match(frame_desc, desc)))
+        return { "matchsets": matchsets,
+                 "kp_desc": kp_desc
+               }
 
 if __name__ == '__main__':
     import platform
