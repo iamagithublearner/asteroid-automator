@@ -27,20 +27,17 @@ class AbstractGameIO(ABC):
 
     # feel free to change these two functions in the descendants
 
-    @abstractmethod
     def key_up(self, key: str):
         """Holds a key on a virtual keyboard."""
         pyautogui.keyUp(key)
 
-    @abstractmethod
     def key_down(self, key: str):
         """Lets go of a key on a virtual keyboard."""
         pyautogui.keyDown(key)
 
     def send_key(self, key: str):
         """Presses a key on a virtual keyboard."""
-        self.key_up(key)
-        self.key_down(key)
+        pyautogui.press(key)
 
 
 class WindowsGameIO(AbstractGameIO):
@@ -50,12 +47,6 @@ class WindowsGameIO(AbstractGameIO):
 
     def fetch_sshot(self):
         return self.d.screenshot()  # TODO: Cut this to self.loc(x, y, w, h)
-
-    def key_up(self, key: str):
-        pyautogui.keyUp(key)
-
-    def key_down(self, key: str):
-        pyautogui.keyDown(key)
 
 
 class LinuxGameIO(AbstractGameIO):
