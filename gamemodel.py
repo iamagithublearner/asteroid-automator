@@ -1,6 +1,7 @@
 import gameio
 import cv2
 import numpy as np
+from functools import wraps
 
 from utility import *
 import pointcluster
@@ -20,11 +21,18 @@ class GameModel:
             ]
         #self.missile = ("missile", cv2.imread("images/game_assets/missile.png", 0))
         self.frame = None
+        self.prev_frame = None
+        self.color_frame = None
+        self.score_img = None
+        self.lives_img = None
+        self.lives_rect = ((10,10), (190, 65))
+        self.score_rect = ((600, 25), (780, 65))
         self.cv_template_thresh = 0.6 # reconfigurable at runtime
         self.duplicate_dist_thresh = 36
 
     def with_frame(fn):
         """Decorator to process screenshot to cv2 format once upon first requirement, then reuse."""
+        @wraps(fn)
         def inner(self, *args, **kwargs):
             if self.frame is None:
                 #print("Fetching frame.")
@@ -34,8 +42,42 @@ class GameModel:
                 self.frame = open_cv_image[:, :, ::-1].copy()
                 self.color_frame = np.copy(self.frame)
                 self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+                self.mask_frame()
             return fn(self, *args, **kwargs)
         return inner
+
+##    def with_masking(fn):
+##        """Decorator to cut lives and score into smaller subimages, and mask them out of self.frame."""
+##        @wraps(fn)
+##        def inner(self, *args, **kwargs):
+##            if self.score_img is None:
+##                
+##            return fn(self, *args, **kwargs)
+##        return inner
+
+    def mask_frame(self):
+        self.lives_img = self.frame[self.lives_rect[0][0]:self.lives_rect[0][1],
+                                    self.lives_rect[1][0]:self.lives_rect[1][1]]
+        lives_mask = np.full(self.frame.shape, 255, dtype=np.uint8)
+        
+        cv2.rectangle(lives_mask,
+                      *self.lives_rect,
+                      color=0, thickness=cv2.FILLED)
+
+        self.score_img = self.frame[self.score_rect[0][0]:self.score_rect[0][1],
+                                    self.score_rect[1][0]:self.score_rect[1][1]]
+        score_mask = np.full(self.frame.shape, 255, dtype=np.uint8)
+        cv2.rectangle(score_mask,
+                      *self.score_rect,
+                      color = 0, thickness=cv2.FILLED)
+        self.frame = cv2.bitwise_and(self.frame, lives_mask)
+        self.frame = cv2.bitwise_and(self.frame, score_mask)
+                
+##        print("Displaying images for testing purposes")
+##        cv2.imshow("Original", self.color_frame)
+##        cv2.waitKey(0)
+##        cv2.imshow("Masked", self.frame)
+##        cv2.waitKey(0)
 
     def clear_frame(self):
         self.prev_frame = frame
@@ -57,6 +99,10 @@ class GameModel:
     def display_results(self, rects = [], pointsets = [], circles = []):
         """Draws results on the current frame for test purposes."""
         displayable = np.copy(self.color_frame)
+        cv2.rectangle(displayable, *self.lives_rect, (255,255,255), 1)
+        cv2.rectangle(displayable, *self.score_rect, (255,255,255), 1)
+        #else:
+        #    displayable = np.copy(self.color_frame)
         for pt, wh, label in rects:
             color = { "big":    (255, 0, 0),
                       "normal": (0, 255, 0),
@@ -156,19 +202,19 @@ class GameModel:
 
     def analyse_frame(self):
         rocks = self.find_asteroids()
-        lives = self.find_ships()
+        #lives = self.find_ships()
         shots = self.find_missiles()
         clusters = self.frame_sift()
 
-        labeled_objects = rocks + lives + shots
+        labeled_objects = rocks + shots
         mystery_clusters = []
         # TODO: remove these comprehensions and document pretty utility functions.
         easy_find = lambda cluster: any(
-            [cluster.max_distance < max(lo[1][0] - lo[0][0], lo[1][1] - lo[0][1])
+            [(not cluster.max_distance or cluster.max_distance < max(lo[1][0] - lo[0][0], lo[1][1] - lo[0][1]))
              and point_in_rect(cluster.center, (lo[0], lo[1]))
              for lo in labeled_objects])
         hard_find = lambda cluster: any(
-            [cluster.max_distance < max(lo[1][0] - lo[0][0], lo[1][1] - lo[0][1])
+            [(not cluster.max_distance or cluster.max_distance < max(lo[1][0] - lo[0][0], lo[1][1] - lo[0][1]))
             and all([point_in_rect(p, (lo[0], lo[1]))
             for p in cluster.points])
             for lo in labeled_objects])
@@ -217,10 +263,10 @@ if __name__ == '__main__':
     s_results = gm.frame_sift()
     ship_results = gm.find_ships()
     polygons = [c.points for c in s_results]
-    #circles = [(c.center, c.max_distance, f"cluster_{i}") for i, c in enumerate(s_results)]
+    ##circles = [(c.center, c.max_distance, f"cluster_{i}") for i, c in enumerate(s_results)]
     r_circles = [(c.center, sqrt(rect_radius_squared(*gm.ships[0][1].shape)), f"cluster_{i}") for i, c in enumerate(s_results)]
     missile_results = gm.find_missiles()
-    #m_circles = [(pt, 10, f"missile_{i}") for i, pt in enumerate(missiles)]
-    #pprint(a_results+ship_results+missile_results)
+    ##m_circles = [(pt, 10, f"missile_{i}") for i, pt in enumerate(missiles)]
+    ##pprint(a_results+ship_results+missile_results)
     gm.display_results(rects=a_results+ship_results+missile_results, pointsets=polygons, circles=r_circles)
     gm.analyse_frame()
