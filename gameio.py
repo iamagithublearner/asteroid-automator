@@ -8,9 +8,6 @@ import pyautogui
 
 PLATFORM_SYS = platform.system()
 
-if PLATFORM_SYS == "Windows":
-    import d3dshot
-
 
 class AbstractGameIO(ABC):
     """Base class for each platform."""
@@ -43,10 +40,9 @@ class AbstractGameIO(ABC):
 class WindowsGameIO(AbstractGameIO):
     def __init__(self):
         super().__init__()
-        self.d = d3dshot.create()
 
     def fetch_sshot(self):
-        return self.d.screenshot()  # TODO: Cut this to self.loc(x, y, w, h)
+        return pyautogui.screenshot(region=self.loc)
 
 
 class LinuxGameIO(AbstractGameIO):
