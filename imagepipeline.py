@@ -2,26 +2,26 @@ import cv2
 import numpy as np
 
 class CVImage:
-    def __init__(self, label="", img=None, iscolor=False):
+    def __init__(self, label="", img=None, color=False, **kwargs):
         self.label = label
         self.image = img
-        self.iscolor = iscolor
+        self.iscolor = color
+        if kwargs:
+            kwargs["color"] = color
+            self.load(**kwargs)
 
     def load(self, filename, color=False, label=None):
         self.image = cv2.imread(filename, int(color))
         if label: self.label = label
+        return self
 
     def copy(self):
         return np.copy(self.image)
 
-##    def snip(self, point, width_height):
-##        return self.image[self.point[0]:self.point[0]+self.width_height[0],
-##                          self.point[1]:self.point[1]+self.width_height[1]]
-
     def snip(self, rect):
         assert all((len(rect)==2, len(rect[0])==2, len(rect[1])==2)) #((x,y),(w,h))
-        return self.image[self.rect[0][0]:self.rect[0][1],
-                          self.rect[1][0]:self.rect[1][1]]
+        return self.image[rect[0][0]:rect[1][0],
+                          rect[0][1]:rect[1][1]]
 
     def mask(self, rect, mask_color=None, nonmask_color=None):
         assert all((len(rect)==2, len(rect[0])==2, len(rect[1])==2)) #((x,y),(w,h))
@@ -38,16 +38,40 @@ class CVImage:
         keypoints, descriptions = sift.detectAndCompute(self.image, None)
         return pointcluster.cluster_set([k.pt for k in keypoints], cluster_radius)
 
-    def set_blob_params(self, minThreshold = 10, maxThreshold = 200,
+    def blob_params(self, minThreshold = 10, maxThreshold = 200,
                      minArea = None, maxArea = None,
                      minCircularity = None, maxCircularity = None,
                      minConvexity = None, maxConvexity = None,
                      minInertiaRatio = None, maxInertiaRatio = None):
         p = cv2.SimpleBlobDetector_Params()
-        
+        p.minThreshold = minThreshold
+        p.maxThreshold = maxThreshold
+        if minArea or maxArea:
+            p.filterByArea = True
+            if minArea: p.minArea = minArea
+            if maxArea: p.maxArea = maxArea
+        if minConvexity or maxConvexity:
+            p.filterByConvexity = True
+            if minConvexity: p.minConvexity = minConvexity
+            if maxConvexity: p.maxConvexity = maxConvexity
+        if minInertiaRatio or maxInertiaRatio:
+            p.filterByInertiaRatio = True
+            if minInertiaRatio: p.minInertiaRatio = minInertiaRatio
+            if maxInertiaRatio: p.maxInertiaRatio = maxInertiaRatio
+        if minCircularity or maxCircularity:
+            p.filterByCircularity = True
+            if minCircularity: p.minCircularity = minCircularity
+            if maxCircularity: p.maxCircularity = maxCircularity
+        return p
 
-    def blob_detect(self, params=None):
-        pass
+    def blob_detect(self, params=None, invert=False):
+        if params is None: params = self.blob_params()
+        detector = cv2.SimpleBlobDetector_create(params)
+        return detector.detect(cv2.bitwise_not(self.image) if invert else self.image)
+
+    def show(self, delay=0):
+        cv2.imshow(self.label, self.image)
+        cv2.waitKey(delay)
     
 
 class ImagePipeline:
