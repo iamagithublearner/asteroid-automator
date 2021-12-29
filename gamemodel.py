@@ -12,13 +12,13 @@ class GameModel:
     def __init__(self, io:gameio.AbstractGameIO):
         self.gameio = io
         self.asteroids = [
-            CVImage("big", color = False, filename = "images/game_assets/rock-big.png"),
-            CVImage("normal", color = False, filename = "images/game_assets/rock-normal.png"),
-            CVImage("small", color = False, filename = "images/game_assets/rock-small.png")
+            CVImage("big", filename = "images/game_assets/rock-big.png"),
+            CVImage("normal", filename = "images/game_assets/rock-normal.png"),
+            CVImage("small", filename = "images/game_assets/rock-small.png")
             ]
         self.ships = [
-            ("ship_off", cv2.imread("images/game_assets/spaceship-off.png", 0)),
-            ("ship_on", cv2.imread("images/game_assets/spaceship-on.png", 0))
+            CVImage("ship_off", filename = "images/game_assets/spaceship-off.png"),
+            CVImage("ship_on", filename = "images/game_assets/spaceship-on.png")
             ]
         #self.missile = ("missile", cv2.imread("images/game_assets/missile.png", 0))
         self.frame = None
@@ -37,19 +37,16 @@ class GameModel:
         def inner(self, *args, **kwargs):
             if self.frame is None:
 ##                #print("Fetching frame.")
-##                sshot = self.gameio.fetch_sshot()
-##                open_cv_image = np.array(sshot) 
-##                # Convert RGB to BGR 
-##                self.frame = open_cv_image[:, :, ::-1].copy()
-##                self.color_frame = np.copy(self.frame)
+                sshot = self.gameio.fetch_sshot()
+                open_cv_image = np.array(sshot) 
+                # Convert RGB to BGR 
+                array = open_cv_image[:, :, ::-1].copy()
+                self.color_frame = CVImage("gameio frame", np.copy(array))
 ##                self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
-##                self.mask_frame()
-                self.color_frame = CVImage("gameio frame")
-                self.color_frame.from_pil(self.gameio.fetch_sshot())
                 self.frame = CVImage("BW frame", self.color_frame.copy())
                 self.frame.image = self.frame.convert_color(False)
-                print(self.frame)
                 self.mask_frame()
+                print(self.frame)
             return fn(self, *args, **kwargs)
         return inner
 
@@ -73,8 +70,8 @@ class GameModel:
 
         self.lives_img = CVImage("lives", self.frame.snip(self.lives_rect))
         self.frame.image = self.frame.mask(self.lives_rect)
-        self.score_img = CVImage("score", self.frame.snip(self.score_mask))
-        self.frame.image = self.frame.mask(self.score_mask)
+        self.score_img = CVImage("score", self.frame.snip(self.score_rect))
+        self.frame.image = self.frame.mask(self.score_rect)
                 
     def clear_frame(self):
         self.prev_frame = frame
@@ -91,10 +88,13 @@ class GameModel:
 ##                if not asteroid_rects or squared_distance(asteroid_rects[-1][0], pt) > self.duplicate_dist_thresh:
 ##                    asteroid_rects.append((pt, (pt[0] + w, pt[1] + h), label))
 ##        return asteroid_rects
-        results = [self.frame.template_detect(i,
-                   self.cv_template_thresh,
-                   self.duplicate_dist_thresh)
-                   for i in self.asteroids]
+        results = []
+        for a in self.asteroids:
+            r = self.frame.template_detect(a,
+               self.cv_template_thresh,
+               self.duplicate_dist_thresh)
+            results.extend(r)
+        return results
 
     @with_frame
     def display_results(self, rects = [], pointsets = [], circles = []):
@@ -130,9 +130,8 @@ class GameModel:
 ##                        1.0, color)
             displayable.draw_circle(center, radius)
             displayable.draw_text(label, center, (255, 255, 0))
-        
-        cv2.imshow("Results", displayable)
-        cv2.waitKey(0)
+
+        displayable.show()
 
     @with_frame
     def frame_sift(self):
@@ -151,7 +150,7 @@ class GameModel:
 ##        #return { "matchsets": matchsets,
 ##        #         "kp_desc": kp_desc
 ##        #       }
-        ship_r = sqrt(rect_radius_squared(*self.ships[0][1].shape) * 0.85)
+        ship_r = sqrt(rect_radius_squared(*self.ships[0].image.shape[:2]) * 0.85)
         #print(f"max radius^2: {ship_rsq}")
         #clusters = pointcluster.cluster_set([k.pt for k in frame_kp], sqrt(ship_rsq))
         #return clusters
@@ -168,7 +167,13 @@ class GameModel:
 ##                if not ship_rects or squared_distance(ship_rects[-1][0], pt) > self.duplicate_dist_thresh:
 ##                    ship_rects.append((pt, (pt[0] + w, pt[1] + h), label))
 ##        return ship_rects
-        return [self.frame.template_detect(a, self.cv_template_thresh, self.duplicate_dist_thresh) for a in self.ships]
+        results = []
+        for a in self.ships:
+            r = self.frame.template_detect(a,
+                    self.cv_template_thresh,
+                    self.duplicate_dist_thresh)
+            results.extend(r)
+        return results
 
     @with_frame
     def find_missiles(self):
@@ -202,7 +207,7 @@ class GameModel:
         p = CVImage.blob_params(minThreshold = 10, maxThreshold = 200,
                                 maxArea = 100,
                                 minConvexity = 0.95,
-                                minIntertiaRatio = 0.4)
+                                minInertiaRatio = 0.4)
         return self.frame.blob_detect(size=9, params=p)
         #im_with_keypoints = cv2.drawKeypoints(self.frame, keypoints, np.array([]),
         #                    (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
@@ -278,9 +283,12 @@ if __name__ == '__main__':
     ship_results = gm.find_ships()
     polygons = [c.points for c in s_results]
     ##circles = [(c.center, c.max_distance, f"cluster_{i}") for i, c in enumerate(s_results)]
-    r_circles = [(c.center, sqrt(rect_radius_squared(*gm.ships[0][1].shape)), f"cluster_{i}") for i, c in enumerate(s_results)]
+    r_circles = [(c.center, sqrt(rect_radius_squared(*gm.ships[0].image.shape[:2])), f"cluster_{i}") for i, c in enumerate(s_results)]
     missile_results = gm.find_missiles()
     ##m_circles = [(pt, 10, f"missile_{i}") for i, pt in enumerate(missiles)]
     ##pprint(a_results+ship_results+missile_results)
-    gm.display_results(rects=a_results+ship_results+missile_results, pointsets=polygons, circles=r_circles)
+    rects = a_results
+    if ship_results: rects.extend(ship_results)
+    if missile_results: rects.extend(missile_results)
+    gm.display_results(rects=rects, pointsets=polygons, circles=r_circles)
     gm.analyse_frame()
