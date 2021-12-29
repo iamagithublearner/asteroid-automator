@@ -36,13 +36,11 @@ class GameModel:
         @wraps(fn)
         def inner(self, *args, **kwargs):
             if self.frame is None:
-##                #print("Fetching frame.")
                 sshot = self.gameio.fetch_sshot()
                 open_cv_image = np.array(sshot) 
                 # Convert RGB to BGR 
                 array = open_cv_image[:, :, ::-1].copy()
                 self.color_frame = CVImage("gameio frame", np.copy(array))
-##                self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
                 self.frame = CVImage("BW frame", self.color_frame.copy())
                 self.frame.image = self.frame.convert_color(False)
                 self.mask_frame()
@@ -51,23 +49,6 @@ class GameModel:
         return inner
 
     def mask_frame(self):
-##        self.lives_img = self.frame[self.lives_rect[0][0]:self.lives_rect[0][1],
-##                                    self.lives_rect[1][0]:self.lives_rect[1][1]]
-##        lives_mask = np.full(self.frame.shape, 255, dtype=np.uint8)
-##        
-##        cv2.rectangle(lives_mask,
-##                      *self.lives_rect,
-##                      color=0, thickness=cv2.FILLED)
-##
-##        self.score_img = self.frame[self.score_rect[0][0]:self.score_rect[0][1],
-##                                    self.score_rect[1][0]:self.score_rect[1][1]]
-##        score_mask = np.full(self.frame.shape, 255, dtype=np.uint8)
-##        cv2.rectangle(score_mask,
-##                      *self.score_rect,
-##                      color = 0, thickness=cv2.FILLED)
-##        self.frame = cv2.bitwise_and(self.frame, lives_mask)
-##        self.frame = cv2.bitwise_and(self.frame, score_mask)
-
         self.lives_img = CVImage("lives", self.frame.snip(self.lives_rect))
         self.frame.image = self.frame.mask(self.lives_rect)
         self.score_img = CVImage("score", self.frame.snip(self.score_rect))
@@ -79,15 +60,6 @@ class GameModel:
 
     @with_frame
     def find_asteroids(self):
-##        asteroid_rects = []
-##        for label, a in self.asteroids:
-##            h, w = a.shape
-##            res = cv2.matchTemplate(self.frame, a, cv2.TM_CCOEFF_NORMED)
-##            loc = np.where( res >= self.cv_template_thresh)
-##            for pt in zip(*loc[::-1]):
-##                if not asteroid_rects or squared_distance(asteroid_rects[-1][0], pt) > self.duplicate_dist_thresh:
-##                    asteroid_rects.append((pt, (pt[0] + w, pt[1] + h), label))
-##        return asteroid_rects
         results = []
         for a in self.asteroids:
             r = self.frame.template_detect(a,
@@ -99,12 +71,7 @@ class GameModel:
     @with_frame
     def display_results(self, rects = [], pointsets = [], circles = []):
         """Draws results on the current frame for test purposes."""
-##        displayable = np.copy(self.color_frame)
-##        cv2.rectangle(displayable, *self.lives_rect, (255,255,255), 1)
-##        cv2.rectangle(displayable, *self.score_rect, (255,255,255), 1)
         displayable = CVImage("GameModel results", self.color_frame.copy())
-        #else:
-        #    displayable = np.copy(self.color_frame)
         label_color = { "big":    (255, 0, 0),
                       "normal": (0, 255, 0),
                       "small":  (0, 0, 255),
@@ -112,22 +79,11 @@ class GameModel:
                       "ship_on": (0, 0, 128),
                       "ship_off": (0, 64, 128)}
         for r in rects:
-##            cv2.rectangle(displayable, pt, wh, color, 1)
-##            cv2.putText(displayable, label, pt,
-##                    cv2.FONT_HERSHEY_PLAIN,
-##                    1.0, color)
             displayable.draw_rect(r, color=label_color[r.label])
         for ps in pointsets:
-##            color = (0, 255, 255)
-##            cv2.polylines(displayable, np.int32([ps]), True, color)
             displayable.draw_poly(ps, color=(0, 255, 255))
 
         for center, radius, label in circles:
-##            color = (255, 255, 0)
-##            cv2.circle(displayable, np.int32(center), int(radius), color, 1)
-##            cv2.putText(displayable, label, np.int32(center),
-##                        cv2.FONT_HERSHEY_PLAIN,
-##                        1.0, color)
             displayable.draw_circle(center, radius)
             displayable.draw_text(label, center, (255, 255, 0))
 
@@ -135,38 +91,11 @@ class GameModel:
 
     @with_frame
     def frame_sift(self):
-##        sift = cv2.SIFT_create()
-##        kp_desc = {} # dict of (keypoints, descriptions) for all ship sprites
-##        kp_desc["frame"] = sift.detectAndCompute(self.frame, None)
-##        frame_kp, frame_desc = kp_desc["frame"]
-        
-##        for label, s in self.ships:
-##            kp_desc[label]  = sift.detectAndCompute(s, None)
-##        bf = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True)
-##        matchsets = {}
-##        for label in kp_desc:
-##            _, desc = kp_desc[label]
-##            matchsets[label] = bf.match(frame_desc, desc)
-##        #return { "matchsets": matchsets,
-##        #         "kp_desc": kp_desc
-##        #       }
         ship_r = sqrt(rect_radius_squared(*self.ships[0].image.shape[:2]) * 0.85)
-        #print(f"max radius^2: {ship_rsq}")
-        #clusters = pointcluster.cluster_set([k.pt for k in frame_kp], sqrt(ship_rsq))
-        #return clusters
         return self.frame.sift_clusters(cluster_radius = ship_r)
 
     @with_frame
     def find_ships(self):
-##        ship_rects = []
-##        for label, a in self.ships:
-##            h, w = a.shape
-##            res = cv2.matchTemplate(self.frame, a, cv2.TM_CCOEFF_NORMED)
-##            loc = np.where( res >= self.cv_template_thresh)
-##            for pt in zip(*loc[::-1]):
-##                if not ship_rects or squared_distance(ship_rects[-1][0], pt) > self.duplicate_dist_thresh:
-##                    ship_rects.append((pt, (pt[0] + w, pt[1] + h), label))
-##        return ship_rects
         results = []
         for a in self.ships:
             r = self.frame.template_detect(a,
@@ -177,47 +106,11 @@ class GameModel:
 
     @with_frame
     def find_missiles(self):
-##        # Setup SimpleBlobDetector parameters.
-##        params = cv2.SimpleBlobDetector_Params()
-##
-##        # Change thresholds
-##        params.minThreshold = 10;
-##        params.maxThreshold = 200;
-##
-##        # Filter by Area.
-##        params.filterByArea = True
-##        #params.minArea = 1500
-##        params.maxArea = 100
-##
-##        # Filter by Circularity
-##        #params.filterByCircularity = True
-##        #params.minCircularity = 0.1
-##
-##        # Filter by Convexity
-##        params.filterByConvexity = True
-##        params.minConvexity = 0.95
-##
-##        # Filter by Inertia
-##        params.filterByInertia = True
-##        params.minInertiaRatio = 0.4
-##
-##        detector = cv2.SimpleBlobDetector_create(params)
-##        keypoints = detector.detect(cv2.bitwise_not(self.frame)) # inverted black/white frame
-
         p = CVImage.blob_params(minThreshold = 10, maxThreshold = 200,
                                 maxArea = 100,
                                 minConvexity = 0.95,
                                 minInertiaRatio = 0.4)
         return self.frame.blob_detect(size=9, params=p)
-        #im_with_keypoints = cv2.drawKeypoints(self.frame, keypoints, np.array([]),
-        #                    (0,0,255), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        #cv2.imshow("keypoints", im_with_keypoints)
-        #cv2.waitKey(0)
-##        s = 9 # pixels for the missile
-##        rect_tuple = lambda pt: ((int(pt[0]-s/2),int(pt[1]-s/2)),
-##                                 (int(pt[0]+s/2), int(pt[1]+s/2)),
-##                                 "missile")
-##        return [rect_tuple(k.pt) for k in keypoints]
 
     def analyse_frame(self):
         rocks = self.find_asteroids()
