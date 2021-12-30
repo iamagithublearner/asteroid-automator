@@ -93,6 +93,7 @@ class CVImage:
 
     def blob_detect(self, size:int, params=None, invert:bool=False, label:str=None) -> typing.List[Rect]:
         if params is None: params = CVImage.blob_params()
+
         detector = cv2.SimpleBlobDetector_create(params)
         keypoints = detector.detect(cv2.bitwise_not(self.image) if invert else self.image)
         rects = []
@@ -126,7 +127,7 @@ class CVImage:
     def draw_rect(self, rect:Rect, color=None, text_color=None, text:bool=True, thickness=1):
         if color is None:
             color = (255, 255, 255) if self.is_color else 255
-        cv2.rectangle(self.image, rect.point, rect.point2, color, thickness)
+        cv2.rectangle(self.image, np.int32(rect.point), np.int32(rect.point2), color, thickness)
         if text:
             self.draw_text(rect.label, rect.point, text_color if text_color else color)
 

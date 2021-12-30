@@ -69,9 +69,9 @@ class GameModel:
         return results
 
     @with_frame
-    def display_results(self, rects = [], pointsets = [], circles = []):
+    def display_results(self, rects = [], pointsets = [], circles = [], label="GameModel Resuls"):
         """Draws results on the current frame for test purposes."""
-        displayable = CVImage("GameModel results", self.color_frame.copy())
+        displayable = CVImage(label, self.color_frame.copy())
         label_color = { "big":    (255, 0, 0),
                       "normal": (0, 255, 0),
                       "small":  (0, 0, 255),
@@ -79,7 +79,8 @@ class GameModel:
                       "ship_on": (0, 0, 128),
                       "ship_off": (0, 64, 128)}
         for r in rects:
-            displayable.draw_rect(r, color=label_color[r.label])
+            print(r)
+            displayable.draw_rect(r, color=label_color.get(r.label, (128, 128, 128)))
         for ps in pointsets:
             displayable.draw_poly(ps, color=(0, 255, 255))
 
@@ -105,12 +106,12 @@ class GameModel:
         return results
 
     @with_frame
-    def find_missiles(self):
+    def find_missiles(self, size=9):
         p = CVImage.blob_params(minThreshold = 10, maxThreshold = 200,
                                 maxArea = 100,
                                 minConvexity = 0.95,
                                 minInertiaRatio = 0.4)
-        return self.frame.blob_detect(size=9, params=p)
+        return self.frame.blob_detect(size=size, params=p, invert=True)
 
     def analyse_frame(self):
         rocks = self.find_asteroids()
