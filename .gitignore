@@ -1,2 +1,4 @@
 asteroids-master/
 __pycache__/
+*.swp
+venv/
