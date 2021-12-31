@@ -109,9 +109,12 @@ class GameModel:
                                 maxArea = 100,
                                 minConvexity = 0.95,
                                 minInertiaRatio = 0.4)
-        return self.frame.blob_detect(size=size, params=p, invert=True)
+        results = self.frame.blob_detect(size=size, params=p, invert=True)
+        for r in results:
+            r.label = "missile"
+        return results
 
-    def analyse_frame(self):
+    def analyse_frame(self, debug=False):
         rocks = self.find_asteroids()
         #lives = self.find_ships()
         shots = self.find_missiles()
@@ -130,11 +133,31 @@ class GameModel:
             mystery_clusters.append(c)
         #r_circles = [(c.center, c.max_distance or 5, f"mystery_{i}") for i, c in enumerate(mystery_clusters)]
         #gm.display_results(rects=labeled_objects, circles=r_circles)
+        m_circles = []
+        m_polysets = []
         for i, c in enumerate(mystery_clusters):
             r = c.bounding_rect()
             r.label = f"mystery_{i}"
             labeled_objects.append(r)
-        gm.display_results(rects=labeled_objects)
+            #if (i < 10): continue
+            mystery = CVImage(f"mystery_{i}", self.frame.snip_bordered(r, border=20))
+            angles = mystery.sift_rotation(self.ships[0].image)
+            m_circles.append((c.center, c.max_distance or 5, ""))
+            m_polysets.extend(
+                    [(c.center, polar_to_cartesian(a+3.14, c.max_distance or 5, c.center))
+                    for a in angles]
+                    )
+            #cv2.imshow(f"mystery_{i}", self.frame.snip_bordered(r, border=20))
+            #cv2.waitKey(0)
+        if debug:
+            gm.display_results(rects=labeled_objects, circles=m_circles, pointsets=m_polysets)
+        return {
+            "asteroids": rocks,
+            "lives": 0,
+            "score": 0,
+            "ship_position": (0, 0),
+            "ship_angle": None
+            }
 
 if __name__ == '__main__':
     import platform
@@ -175,4 +198,4 @@ if __name__ == '__main__':
     if ship_results: rects.extend(ship_results)
     if missile_results: rects.extend(missile_results)
     #gm.display_results(rects=rects, pointsets=polygons, circles=r_circles)
-    gm.analyse_frame()
+    gm.analyse_frame(debug=True)

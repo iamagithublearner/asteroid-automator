@@ -1,8 +1,10 @@
 import cv2
 import numpy as np
 import typing
-import pointcluster
+#from skimage.transform import radon
+from math import atan2, pi # SIFT rotation
 
+import pointcluster
 from shapes import Rect
 from utility import *
 
@@ -45,9 +47,19 @@ class CVImage:
 
     def snip(self, rect):
         assert all((len(rect)==2, len(rect[0])==2, len(rect[1])==2)) #((x,y),(w,h))
-        return self.image[rect[0][1]:rect[0][1]+rect[1][1],
-                          rect[0][0]:rect[0][0]+rect[1][0]
+        return self.image[int(rect[0][1]):int(rect[0][1]+rect[1][1]),
+                          int(rect[0][0]):int(rect[0][0]+rect[1][0])
                           ]
+
+    def snip_bordered(self, rect, border=5):
+        """Enlarge a rectangle to snip, respecting image bounds"""
+        assert all((len(rect)==2, len(rect[0])==2, len(rect[1])==2)) #((x,y),(w,h))
+        xy, wh = rect; x, y = xy; w, h = wh
+        x = max(0, x-border)
+        y = max(0, y-border)
+        w = min(self.image.shape[1]-x, w + (border*2))
+        h = min(self.image.shape[0]-y, h + (border*2))
+        return self.snip( ((x,y),(w,h)) )
 
     def mask(self, rect, mask_color=None, nonmask_color=None):
         assert all((len(rect)==2, len(rect[0])==2, len(rect[1])==2)) #((x,y),(w,h))
@@ -63,6 +75,69 @@ class CVImage:
         sift = cv2.SIFT_create()
         keypoints, descriptions = sift.detectAndCompute(self.image, None)
         return pointcluster.cluster_set([k.pt for k in keypoints], cluster_radius)
+
+    def sift_rotation(self, template, debug=False):
+        """attempts to get angle of rotation around keypoints' centroid"""
+        sift = cv2.SIFT_create()
+        template_kp, template_desc = sift.detectAndCompute(template, None)
+        keypoints, descriptions = sift.detectAndCompute(self.image, None)
+        # initialize Brute force matching
+        bf = cv2.BFMatcher(cv2.NORM_L1, crossCheck=True)
+
+        matches = bf.match(template_desc, descriptions)
+
+        #sort the matches
+        matches = sorted(matches, key = lambda match : match.distance)
+        #print(matches)
+        percentage = len(matches) / min(len(keypoints), len(template_kp))
+        if debug:
+            print(f"""Template keypoints: {len(keypoints)}
+Image keypoints: {len(template_kp)}
+Matches: {len(matches)} ({percentage * 100:.2f}%)
+Minimum match distance: {matches[0].distance}
+""")
+        # TODO: if minium match distance is too high, return false.
+        template_center = (
+                sum([p.pt[0] for p in template_kp]) / len(template_kp),
+                sum([p.pt[1]for p in template_kp]) / len(template_kp)
+                )
+        image_center = (
+                sum([p.pt[0] for p in keypoints]) / len(keypoints),
+                sum([p.pt[1]for p in keypoints]) / len(keypoints)
+                )
+        def fp(pt):
+            return f"({pt[0]:.1f}, {pt[1]:.1f})"
+
+        angles = []
+        for i, m in enumerate(matches):
+            # Get keypoint offset from center
+            template_pt = template_kp[m.queryIdx].pt
+            tx = template_pt[0] - template_center[0]
+            ty = template_pt[1] - template_center[1]
+
+            image_pt = keypoints[m.trainIdx].pt
+            ix = image_pt[0] - image_center[0]
+            iy = image_pt[1] - image_center[1]
+
+            # get angle between y-axis and offset, positives only
+            template_angle = atan2(ty, tx)
+            image_angle = atan2(iy, ix)
+            diff_angle = template_angle - image_angle
+            angles.append(diff_angle)
+            R2D = 180 / pi
+            if debug:
+                print(f"""Match {i+1}:
+queryIdx: {m.queryIdx} ({fp(template_kp[m.queryIdx].pt)}) -> {template_angle:.1f} ({template_angle * R2D:.1f})
+trainIdx: {m.trainIdx} ({fp(keypoints[m.trainIdx].pt)}) -> {image_angle:.1f} ({image_angle * R2D:.1f})
+distance: {m.distance}
+angle diff: {diff_angle:.1f} ({diff_angle * R2D:.1f})
+""")
+
+        #matched_imge = cv2.drawMatches(template, template_kp, self.image, keypoints, matches[:30], None)
+
+        #cv2.imshow("Matching Images", matched_imge)
+        #cv2.waitKey(0)
+        return angles
 
     @staticmethod
     def blob_params(*, minThreshold = 10, maxThreshold = 200,

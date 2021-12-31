@@ -1,4 +1,4 @@
-from math import sqrt
+from math import sqrt, cos, sin
 
 def squared_distance(vec1, vec2):
     """returns distance-squared between two x, y point tuples"""
@@ -17,3 +17,8 @@ def point_in_rect(pt, rect):
     rx2 = rx + rw
     ry2 = ry + rh
     return all([px >= rx, py >= ry, px <= rx2, py <= ry2])
+
+def polar_to_cartesian(theta, radius, center=(0, 0)):
+    x = radius * cos(theta)
+    y = radius * sin(theta)
+    return (x + center[0], y + center[1])
