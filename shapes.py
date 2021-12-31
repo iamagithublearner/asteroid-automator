@@ -36,9 +36,10 @@ class Rect:
         return 2
 
     def __getitem__(self, i):
-        if i == 0: return (self.x, self.y)
-        elif i == 1: return (self.w, self.h)
-        else: raise IndexError("Rect only supports index of 0 or 1.")
+        if i > 1 or i < 0:
+            raise IndexError("Rect only supports index of 0 or 1.")
+
+        return ((self.x, self.y), (self.w, self.h))[i]
 
     def __setitem__(self, i, value):
         assert i in (0, 1) and len(value) == 2
