@@ -44,7 +44,6 @@ class GameModel:
                 self.frame = CVImage("BW frame", self.color_frame.copy())
                 self.frame.image = self.frame.convert_color(False)
                 self.mask_frame()
-                print(self.frame)
             return fn(self, *args, **kwargs)
         return inner
 
@@ -79,7 +78,6 @@ class GameModel:
                       "ship_on": (0, 0, 128),
                       "ship_off": (0, 64, 128)}
         for r in rects:
-            print(r)
             displayable.draw_rect(r, color=label_color.get(r.label, (128, 128, 128)))
         for ps in pointsets:
             displayable.draw_poly(ps, color=(0, 255, 255))
@@ -121,30 +119,22 @@ class GameModel:
 
         labeled_objects = rocks + shots
         mystery_clusters = []
-        # TODO: remove these comprehensions and document pretty utility functions.
-        easy_find = lambda cluster: any(
-            [(not cluster.max_distance or cluster.max_distance < max(lo[1][0] - lo[0][0], lo[1][1] - lo[0][1]))
-             and point_in_rect(cluster.center, (lo[0], lo[1]))
-             for lo in labeled_objects])
-        hard_find = lambda cluster: any(
-            [(not cluster.max_distance or cluster.max_distance < max(lo[1][0] - lo[0][0], lo[1][1] - lo[0][1]))
-            and all([point_in_rect(p, (lo[0], lo[1]))
-            for p in cluster.points])
+        easy_find = lambda cl: any([pointcluster.cluster_overlaps_rect(cl, lo)
             for lo in labeled_objects])
-        # Allow me to explain/apologize.
-        ## The first term (cluster.max_distance < ...) stops big point clusters from
-        ## being regarded as smalll objects. (Player ship being matched "inside" a missile)
-
-        ## The second term (point_in_rect(...)) checks for a "cluster" inside a "rect".
-        ## easy_find just checks the center.
-        ## hard_find checks every point, in case the center is off.
+        hard_find = lambda cl: any([pointcluster.cluster_within_rect(cl, lo)
+            for lo in labeled_objects])
 
         for i, c in enumerate(clusters):
             #if easy_find(c): continue
             if hard_find(c): continue
             mystery_clusters.append(c)
-        r_circles = [(c.center, c.max_distance or 5, f"mystery_{i}") for i, c in enumerate(mystery_clusters)]
-        gm.display_results(rects=labeled_objects, circles=r_circles)
+        #r_circles = [(c.center, c.max_distance or 5, f"mystery_{i}") for i, c in enumerate(mystery_clusters)]
+        #gm.display_results(rects=labeled_objects, circles=r_circles)
+        for i, c in enumerate(mystery_clusters):
+            r = c.bounding_rect()
+            r.label = f"mystery_{i}"
+            labeled_objects.append(r)
+        gm.display_results(rects=labeled_objects)
 
 if __name__ == '__main__':
     import platform
@@ -184,5 +174,5 @@ if __name__ == '__main__':
     rects = a_results
     if ship_results: rects.extend(ship_results)
     if missile_results: rects.extend(missile_results)
-    gm.display_results(rects=rects, pointsets=polygons, circles=r_circles)
+    #gm.display_results(rects=rects, pointsets=polygons, circles=r_circles)
     gm.analyse_frame()

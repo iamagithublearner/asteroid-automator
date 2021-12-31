@@ -1,4 +1,5 @@
 from utility import *
+from shapes import Rect
 
 class PointCluster:
     def __init__(self):
@@ -25,6 +26,14 @@ class PointCluster:
     def __repr__(self):
         c = f"({self.center[0]:.1f},{self.center[1]:.1f})"
         return f"<PointCluster center={c}, {len(self.points)} points>"
+
+    def bounding_rect(self):
+        """Returns the smallest rectangle that contains all the cluster's points."""
+        top = min(p[1] for p in self.points)
+        height = max(p[1] for p in self.points) - top
+        left = min(p[0] for p in self.points)
+        width = max(p[0] for p in self.points) - left
+        return Rect((left, top), (width, height))
 
 def cluster_set(points, maxradius):
     """returns a list of PointCluster objects. Points are fit within circles of maxradius"""
@@ -56,3 +65,19 @@ def cluster_set(points, maxradius):
     #print(clusters)
     #print(new_clusters.values())
     return new_clusters.values()
+
+def cluster_overlaps_rect(cluster, rect):
+    if not cluster.max_distance:
+        # cluster is a single point
+        return point_in_rect(cluster.center, rect)
+    elif not point_in_rect(cluster.center, rect):
+        # center is outside the rect, so >= half the points are outside of it.
+        return False
+    largest_dimension = max(rect[1][0] - rect[0][0], rect[1][1] - rect[0][1])
+    if cluster.max_distance < largest_dimension:
+        return True
+
+def cluster_within_rect(cluster, rect):
+    if not cluster.max_distance:
+        return point_in_rect(cluster.center, rect)
+    return all([point_in_rect(p, rect) for p in cluster.points])

@@ -3,7 +3,7 @@ class Rect:
         if len(args) == 4 and all([type(i) is int or type(i) is float for i in args]):
             self.x, self.y, self.w, self.h = args
         elif len(args) == 2 and all([type(i) is tuple and len(i) == 2 and all([type(j) is int or type(j) is float for j in i]) for i in args]):
-            xy, wh = self.args
+            xy, wh = args
             self.x, self.y = xy
             self.w, self.h = wh
         elif all([k in kwargs for k in ("x", "y", "w", "h")]):
